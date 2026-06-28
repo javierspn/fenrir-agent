@@ -14,10 +14,12 @@ crystallizing verified skills, leaning on an expensive "teacher" model less and 
 [![Python](https://img.shields.io/badge/python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
 [![Status](https://img.shields.io/badge/status-research%20pilot-orange?style=for-the-badge)](#status)
 [![Domain](https://img.shields.io/badge/pilot-mathematics-success?style=for-the-badge)](#purpose)
+[![Progress log](https://img.shields.io/badge/progress-log-f0883e?style=for-the-badge)](https://javierspn.github.io/fenrir-progress/)
 
 <br/>
 
 **[Purpose](#purpose)** ·
+**[Progress log ↗](https://javierspn.github.io/fenrir-progress/)** ·
 **[Scientific base](#science)** ·
 **[The loop](#loop)** ·
 **[Architecture](#architecture)** ·
@@ -216,6 +218,9 @@ itself:
 **Compounding is demonstrated only if reuse rises while escalation and cost fall — together.** A
 flat reuse curve is reported honestly. Two Grafana dashboards render this: an engineer **Learning**
 view and a human **"Are we learning?"** verdict view.
+
+📊 **Watch it happen:** cohort numbers, curves, and screenshots are posted as they land at
+**[the progress log →](https://javierspn.github.io/fenrir-progress/)**.
 
 <div align="right"><a href="#top">↑ back to top</a></div>
 
