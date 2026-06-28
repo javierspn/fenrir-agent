@@ -1,0 +1,105 @@
+# Fenrir 01-infra data stack. Single-command bring-up (FR-001): postgres (pgvector),
+# redis (cache + fast counters), grafana (read-only dashboard), benchmark-loader (one-shot).
+# NO neo4j — the graph DB is deferred to Phase 2 (constitution XI / D4, SC-007).
+#
+# Durability (D10 / FR-002a): postgres keeps fsync + synchronous_commit ON (defaults,
+# never disabled) so committed tx survive a power cut; redis is non-authoritative (budget
+# source-of-truth is postgres budget_tracking); restart: unless-stopped auto-recovers on boot.
+# IMPORTANT: the postgres_data volume MUST live on a local fsync-honoring disk, never a
+# lying network/overlay mount, or ACID is void.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fenrir_core
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # local disk that honors fsync
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fenrir_core"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # AOF everysec is INSURANCE ONLY — redis is non-authoritative; a full wipe loses
+    # zero durable data (budget counter is reconciled from postgres on restart).
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:11.4.0   # pinned (never :latest; bare :11 is not published) — FR-001
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      # datasource provisioning reads this for the read-only role (FR-004a)
+      GRAFANA_DB_RO_PASSWORD: ${GRAFANA_DB_RO_PASSWORD}
+    volumes:
+      - ./dashboard/provisioning:/etc/grafana/provisioning   # dashboards-as-code (volume disposable)
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+
+  # 002-cognitive-core (T005): the loop runner + the internal budget-governed LLM proxy
+  # (fenrir:8080/llm). The ONLY model-call egress (Constitution X). Mounts docker.sock to spawn
+  # ephemeral `--network none` verification/skill sandboxes. NO neo4j (XI/D4).
+  fenrir:
+    build:
+      context: ..
+      dockerfile: fenrir/Dockerfile
+    profiles: ["cognitive"]    # `docker compose --profile cognitive up -d fenrir`
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env                   # all required Settings vars (GRAFANA_*, OWNER_TELEGRAM_*, etc.)
+    environment:               # container-network overrides win over env_file
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      # MUST override the host's .env OLLAMA_HOST (localhost) — inside the container the host
+      # Ollama is reached via the docker-bridge gateway, not localhost. Host Ollama must listen
+      # off-loopback (systemd drop-in: Environment="OLLAMA_HOST=0.0.0.0:11434").
+      OLLAMA_HOST: http://host.docker.internal:11434
+      LLM_PROXY_URL: http://localhost:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # reach native Ollama on the host (GPU)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # spawn ephemeral sandboxes
+    expose:
+      - "8080"   # proxy on the internal network only — never published to the host
+
+  benchmark-loader:
+    build:
+      context: ..
+      dockerfile: benchmark_loader/Dockerfile
+    profiles: ["bootstrap"]   # one-shot: `docker compose --profile bootstrap run benchmark-loader`
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+    restart: "no"
+
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:

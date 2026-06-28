@@ -1,0 +1,19 @@
+# Grafana datasource — connects as the read-only grafana_ro role (FR-004/FR-004a).
+# Read-only is enforced by Postgres privileges (grafana_ro = SELECT only), not by
+# Grafana config: a leaked dashboard credential still cannot mutate state.
+apiVersion: 1
+
+datasources:
+  - name: fenrir_core
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: grafana_ro
+    database: fenrir_core
+    isDefault: true
+    editable: false
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1600
+    secureJsonData:
+      password: ${GRAFANA_DB_RO_PASSWORD}

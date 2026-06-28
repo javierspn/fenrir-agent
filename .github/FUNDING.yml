@@ -1,0 +1,7 @@
+# GitHub funding links (renders the "Sponsor" button on the repo).
+# Donations go straight to compute for the experiment: frontier-teacher API credits
+# and local-inference hardware (a Mac Mini would let the small-model loop run more,
+# cheaper, and off the paid teacher). See the "Support the experiment" section of the README.
+github: [javierspn]
+# Add when set up (Ko-fi / Open Collective / Buy-Me-a-Coffee / a hardware wishlist):
+# custom: ["https://ko-fi.com/REPLACE_ME"]

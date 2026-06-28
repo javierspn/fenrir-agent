@@ -1,0 +1,584 @@
+{
+ "annotations": {
+  "list": []
+ },
+ "title": "Learning",
+ "uid": "fenrir-learning",
+ "schemaVersion": 39,
+ "version": 6,
+ "tags": [
+  "fenrir",
+  "002-cognitive-core"
+ ],
+ "description": "The measurement (002). Three falsifiable curves + supporting panels, all via the read-only grafana_ro role (FR-027/029, SC-010). A FLAT escalation curve is a valid negative result (SC-005).",
+ "time": {
+  "from": "now-30d",
+  "to": "now"
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "text",
+   "title": "⚠ Contamination caveat (FR-030)",
+   "gridPos": {
+    "h": 3,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "All current benchmark rows are **contamination_unsafe** (likely in base-model pretraining). Accuracy here is **NOT** a clean generalization claim. A flat escalation curve below is a valid, recorded negative result (recall, not compounding) — SC-005."
+   }
+  },
+  {
+   "id": 2,
+   "type": "timeseries",
+   "title": "Curve 1 — cost per solved task (USD)",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 3
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "rawSql": "SELECT date_trunc('hour', created_at) AS time, avg(cost_usd) AS cost_per_solved_task FROM tasks WHERE verified = true AND $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "type": "timeseries",
+   "title": "Curve 2 — escalation rate (flat = negative result)",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 3
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "rawSql": "SELECT date_trunc('hour', created_at) AS time, avg(CASE WHEN escalated THEN 1.0 ELSE 0.0 END) AS escalation_rate FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "type": "timeseries",
+   "title": "Curve 3 — retrieval vs from-scratch share",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 3
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "rawSql": "SELECT date_trunc('hour', created_at) AS time, avg(CASE WHEN solve_path = 'retrieval' THEN 1.0 ELSE 0.0 END) AS retrieval_share FROM tasks WHERE solve_path IS NOT NULL AND $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "type": "stat",
+   "title": "Episodes",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 0,
+    "y": 11
+   },
+   "targets": [
+    {
+     "format": "table",
+     "rawSql": "SELECT count(*) AS episodes FROM short_term_memory",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "type": "table",
+   "title": "Skills by state",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 6,
+    "y": 11
+   },
+   "targets": [
+    {
+     "format": "table",
+     "rawSql": "SELECT state, count(*) AS n FROM skills GROUP BY state ORDER BY state",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "type": "table",
+   "title": "Pool occupancy (contamination flagged)",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 12,
+    "y": 11
+   },
+   "targets": [
+    {
+     "format": "table",
+     "rawSql": "SELECT pool, contamination_safe, count(*) AS n FROM benchmark_tasks GROUP BY pool, contamination_safe ORDER BY pool",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "type": "stat",
+   "title": "Consolidation runs",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 18,
+    "y": 11
+   },
+   "targets": [
+    {
+     "format": "table",
+     "rawSql": "SELECT count(*) AS consolidation_runs FROM consolidation_runs",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "type": "histogram",
+   "title": "Prediction-error distribution",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 16
+   },
+   "targets": [
+    {
+     "format": "table",
+     "rawSql": "SELECT prediction_error FROM tasks WHERE prediction_error IS NOT NULL",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "type": "timeseries",
+   "title": "Consolidation events over time",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 16
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "rawSql": "SELECT date_trunc('hour', started_at) AS time, count(*) AS runs, sum(memories_processed) AS memories FROM consolidation_runs WHERE $__timeFilter(started_at) GROUP BY 1 ORDER BY 1",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "type": "text",
+   "title": "💸 Cost & Tokens",
+   "gridPos": {
+    "h": 2,
+    "w": 24,
+    "x": 0,
+    "y": 24
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "Daily LLM spend vs the hard cap (`budget_tracking.daily_budget_usd`, Constitution IX) + per-task token/cost. Only escalated (frontier) solves cost; local qwen2.5 + sympy verify are free."
+   }
+  },
+  {
+   "id": 12,
+   "type": "gauge",
+   "title": "Today: budget used %",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 0,
+    "y": 26
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "thresholds": {
+      "steps": [
+       {
+        "color": "green",
+        "value": 0
+       },
+       {
+        "color": "yellow",
+        "value": 70
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     }
+    }
+   },
+   "targets": [
+    {
+     "format": "table",
+     "rawSql": "SELECT CASE WHEN daily_budget_usd > 0 THEN 100.0 * COALESCE(llm_cost_usd,0) / daily_budget_usd ELSE 0 END AS pct_used FROM budget_tracking WHERE date = CURRENT_DATE",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "type": "stat",
+   "title": "Today spend / cap (USD)",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 6,
+    "y": 26
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD"
+    }
+   },
+   "targets": [
+    {
+     "format": "table",
+     "rawSql": "SELECT COALESCE(llm_cost_usd,0) AS spent_today, daily_budget_usd AS cap FROM budget_tracking WHERE date = CURRENT_DATE",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "type": "stat",
+   "title": "Total tokens used",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 12,
+    "y": 26
+   },
+   "targets": [
+    {
+     "format": "table",
+     "rawSql": "SELECT COALESCE(sum(tokens_used),0) AS total_tokens FROM tasks",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 15,
+   "type": "stat",
+   "title": "Total spend (USD, all-time)",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 6,
+    "x": 18,
+    "y": 26
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD"
+    }
+   },
+   "targets": [
+    {
+     "format": "table",
+     "rawSql": "SELECT COALESCE(sum(llm_cost_usd),0) AS total_spend FROM budget_tracking",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 16,
+   "type": "timeseries",
+   "title": "Daily LLM cost (USD)",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 32
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD"
+    }
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "rawSql": "SELECT date::timestamptz AS time, COALESCE(llm_cost_usd,0) AS daily_cost, daily_budget_usd AS cap FROM budget_tracking WHERE $__timeFilter(date::timestamptz) ORDER BY 1",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "type": "timeseries",
+   "title": "Tokens & cost per escalated task over time",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 32
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "rawSql": "SELECT date_trunc('hour', created_at) AS time, avg(tokens_used) FILTER (WHERE escalated) AS avg_tokens, avg(cost_usd) FILTER (WHERE escalated) AS avg_cost FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     }
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "type": "text",
+   "title": "🧠 Memory consolidation replay (003)",
+   "gridPos": {
+    "h": 2,
+    "w": 24,
+    "x": 0,
+    "y": 39
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "Two-stage model — **B (decay)**: effective_salience fades with age (half-life `DECAY_HALFLIFE_DAYS`, stored bookmark immutable). A flat curve is an accepted negative result."
+   }
+  },
+  {
+   "id": 19,
+   "type": "timeseries",
+   "title": "Decay — effective_salience vs episode age (003 B, curve b)",
+   "description": "Each point is a raw episode plotted at its created_at; older episodes (left) show lower effective_salience. Mirrors fenrir.memory.salience.effective_salience() exactly. Anchors live in LTM and are exempt.",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 41
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "points",
+      "pointSize": 4
+     }
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT created_at AS time, salience * exp(-ln(2) * extract(epoch from (now() - coalesce(last_reactivated_at, created_at))) / (86400 * 7.0)) AS effective_salience FROM short_term_memory WHERE $__timeFilter(created_at) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "type": "timeseries",
+   "title": "Replay — abstraction strength vs reinforcement_count (003 C, curve a)",
+   "description": "Each consolidated abstraction plotted: strength should rise with replay hits (reinforcement_count), not sit at a constant. Flat/absent = no competition yet (valid negative result).",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 49
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "points",
+      "pointSize": 5
+     }
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT last_reinforced_at AS time, strength, reinforcement_count FROM long_term_memory WHERE memory_type='semantic' AND abstraction_level>=2 AND $__timeFilter(last_reinforced_at) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 21,
+   "type": "timeseries",
+   "title": "Reuse — consolidated-abstraction retrieval rate (003 C, curve c — HEADLINE)",
+   "description": "Share of tasks for which a consolidated long_term_memory abstraction was retrievable/applied (tasks.retrieval_abstraction_id). The SC-008 compounding signal: a rate measurably above zero = consolidated knowledge is being reused. A flat-zero curve is an accepted, honestly-reported negative result.",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 57
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "line"
+     },
+     "min": 0,
+     "max": 1
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT date_trunc('hour', created_at) AS time, avg(CASE WHEN retrieval_abstraction_id IS NOT NULL THEN 1.0 ELSE 0.0 END) AS abstraction_reuse_rate FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+    }
+   ]
+  }
+ ]
+}

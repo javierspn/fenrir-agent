@@ -1,0 +1,16 @@
+# Network-isolated execution image for sympy verification + untrusted skill code (T003).
+# Constitution X: sandboxes reach ONLY the proxy — verification/skill execution need NO network,
+# so containers are run with `--network none` (see fenrir/sandbox/runner.py). This image carries
+# no network tooling (no curl/wget/ssh) and runs as a non-root user on a read-only rootfs.
+FROM python:3.12-slim
+
+# sympy is the only third-party dependency the sandbox needs.
+RUN pip install --no-cache-dir "sympy>=1.12" \
+    && useradd --create-home --uid 10001 sandboxer
+
+# The verifier/skill payload is mounted/streamed at run time into /work (tmpfs).
+WORKDIR /work
+USER sandboxer
+
+# No ENTRYPOINT that opens the network; the runner invokes `python -c <payload>` per job.
+CMD ["python", "-c", "print('fenrir-sandbox ready')"]

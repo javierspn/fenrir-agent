@@ -1,0 +1,30 @@
+title = "ragnarok / fenrir gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "anthropic-key"
+description = "Anthropic API key"
+regex = '''sk-ant-[a-zA-Z0-9_-]{20,}'''
+tags = ["anthropic", "secret"]
+
+[[rules]]
+id = "openbao-token"
+description = "OpenBao/Vault token"
+regex = '''hvs\.[a-zA-Z0-9]{24,}'''
+tags = ["openbao", "secret"]
+
+[[rules]]
+id = "ghcr-pat"
+description = "GitHub PAT (classic)"
+regex = '''ghp_[a-zA-Z0-9]{36}'''
+tags = ["github", "pat"]
+
+[allowlist]
+description = "Known false positives — placeholders in spec/contract docs, never real secrets"
+regexes = [
+  # .env.example / env.contract.md placeholders.
+  '''sk-ant-\.\.\.''',
+  '''change-me''',
+]

@@ -1,0 +1,487 @@
+{
+ "annotations": {
+  "list": []
+ },
+ "title": "Fenrir — Are we learning?",
+ "uid": "fenrir-overview",
+ "tags": [
+  "fenrir",
+  "human"
+ ],
+ "schemaVersion": 39,
+ "version": 1,
+ "editable": true,
+ "description": "Human-readable verdict view: is Fenrir compounding (learning) or just recalling? Engineer detail lives in the 'Learning' dashboard.",
+ "time": {
+  "from": "now-7d",
+  "to": "now"
+ },
+ "refresh": "5m",
+ "panels": [
+  {
+   "id": 1,
+   "type": "text",
+   "title": "",
+   "gridPos": {
+    "h": 4,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "## 🧠 Fenrir — Are we actually learning?\nFenrir is **compounding** (real learning, not just recall) only if these move together over time: **Reuse ↑**, **Teacher-escalation ↓**, **Cost per solved ↓**, while **Skills ↑**. A flat **Reuse** curve is an honest *negative* result — recall, not compounding. _Benchmarks are contamination-unsafe, so absolute accuracy isn't a clean claim; the **trends** are the signal._"
+   }
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Reuse rate  ·  ↑ = compounding",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 0,
+    "y": 4
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "color": {
+      "mode": "thresholds",
+      "fixedColor": "green"
+     },
+     "custom": {},
+     "mappings": [],
+     "decimals": 1,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "value": null,
+        "color": "text"
+       },
+       {
+        "value": 0.01,
+        "color": "green"
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "graphMode": "area",
+    "colorMode": "value",
+    "textMode": "value_and_name",
+    "justifyMode": "auto"
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT date_trunc('day',created_at) AS time, avg(CASE WHEN retrieval_abstraction_id IS NOT NULL THEN 100.0 ELSE 0.0 END) AS \"Reuse %\" FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Teacher escalation  ·  ↓ = learning",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 6,
+    "y": 4
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "blue"
+     },
+     "custom": {},
+     "mappings": [],
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "graphMode": "area",
+    "colorMode": "value",
+    "textMode": "value_and_name",
+    "justifyMode": "auto"
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT date_trunc('day',created_at) AS time, avg(CASE WHEN escalated THEN 100.0 ELSE 0.0 END) AS \"Escalation %\" FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Cost / solved task  ·  ↓ = compounding",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 12,
+    "y": 4
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD",
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "blue"
+     },
+     "custom": {},
+     "mappings": [],
+     "decimals": 5
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "graphMode": "area",
+    "colorMode": "value",
+    "textMode": "value_and_name",
+    "justifyMode": "auto"
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT date_trunc('day',created_at) AS time, avg(cost_usd) AS \"Cost/solved\" FROM tasks WHERE verified=true AND $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "type": "stat",
+   "title": "Skills learned  ·  ↑ = asset grows",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 18,
+    "y": 4
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "color": {
+      "mode": "thresholds",
+      "fixedColor": "green"
+     },
+     "custom": {},
+     "mappings": [],
+     "decimals": 0,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "value": null,
+        "color": "green"
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "graphMode": "area",
+    "colorMode": "value",
+    "textMode": "value_and_name",
+    "justifyMode": "auto"
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT created_at AS time, count(*) OVER (ORDER BY created_at) AS \"Skills\" FROM skills WHERE state='stable' AND $__timeFilter(created_at) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "⭐ Is consolidated knowledge being REUSED?  (the headline bet)",
+   "description": "Share of tasks that applied a consolidated abstraction. Rising above zero = compounding demonstrated; flat zero = honest negative result (recall only).",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 9,
+    "w": 24,
+    "x": 0,
+    "y": 9
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 12,
+      "lineWidth": 2,
+      "pointSize": 6,
+      "showPoints": "auto"
+     },
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT date_trunc('day',created_at) AS time, avg(CASE WHEN retrieval_abstraction_id IS NOT NULL THEN 100.0 ELSE 0.0 END) AS \"Reuse %\" FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "type": "timeseries",
+   "title": "Is it needing the expensive teacher LESS?",
+   "description": "Share of tasks escalated to the paid teacher. Falling over time = the small model is internalising skills.",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 18
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 12,
+      "lineWidth": 2,
+      "pointSize": 6,
+      "showPoints": "auto"
+     },
+     "min": 0,
+     "max": 100
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT date_trunc('day',created_at) AS time, avg(CASE WHEN escalated THEN 100.0 ELSE 0.0 END) AS \"Escalation %\" FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "Is each solved problem getting CHEAPER?",
+   "description": "Average $ per verified-correct task. Falling = compounding (the Nth similar task costs less).",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 18
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 12,
+      "lineWidth": 2,
+      "pointSize": 6,
+      "showPoints": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT date_trunc('day',created_at) AS time, avg(cost_usd) AS \"Cost/solved\" FROM tasks WHERE verified=true AND $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "type": "timeseries",
+   "title": "Skills accumulated (the durable asset)",
+   "description": "Cumulative crystallised, self-verified skills. The library survives model swaps.",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 26
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 12,
+      "lineWidth": 2,
+      "pointSize": 6,
+      "showPoints": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT created_at AS time, count(*) OVER (ORDER BY created_at) AS \"Skills\" FROM skills WHERE state='stable' AND $__timeFilter(created_at) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "type": "timeseries",
+   "title": "Memory abstractions formed by consolidation",
+   "description": "Cumulative generalised long-term abstractions produced by competitive replay (003-C).",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 26
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 12,
+      "lineWidth": 2,
+      "pointSize": 6,
+      "showPoints": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT created_at AS time, count(*) OVER (ORDER BY created_at) AS \"Abstractions\" FROM long_term_memory WHERE abstraction_level>=2 AND memory_type='semantic' AND $__timeFilter(created_at) ORDER BY 1"
+    }
+   ]
+  }
+ ]
+}
