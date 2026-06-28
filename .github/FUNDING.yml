@@ -1,7 +1,16 @@
-# GitHub funding links (renders the "Sponsor" button on the repo).
-# Donations go straight to compute for the experiment: frontier-teacher API credits
-# and local-inference hardware (a Mac Mini would let the small-model loop run more,
-# cheaper, and off the paid teacher). See the "Support the experiment" section of the README.
-github: [javierspn]
-# Add when set up (Ko-fi / Open Collective / Buy-Me-a-Coffee / a hardware wishlist):
-# custom: ["https://ko-fi.com/REPLACE_ME"]
+# Funding links — GitHub renders a "Sponsor ❤" button from the first active key below.
+#
+# Donations go straight to COMPUTE for the experiment:
+#   • frontier-teacher API credits (faster learning while the skill library is thin)
+#   • local-inference hardware — a Mac Mini lets the small-model loop run more, cheaper,
+#     and lean off the paid teacher (which is literally the metric being measured).
+# See the README "Support the experiment" section.
+#
+# Uncomment a line ONCE the account exists. Commented keys render no button.
+
+ko_fi: javierspn                    # ko-fi.com/javierspn — instant, no approval; "Mac Mini fund" goal
+# github: javierspn                 # needs GitHub Sponsors enrolled (github.com/sponsors) + Stripe Connect
+# open_collective: REPLACE_ME       # transparent public ledger (money → API credits / hardware); needs a fiscal host
+# buy_me_a_coffee: REPLACE_ME
+# liberapay: REPLACE_ME
+# custom: ["https://www.amazon.es/hz/wishlist/REPLACE_ME"]   # Mac Mini hardware wishlist

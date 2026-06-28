@@ -262,7 +262,8 @@ Donations go **straight to compute**:
 - 🖥️ **Local-inference hardware** — e.g. a **Mac Mini** lets the small-model loop run more often,
   cheaper, and lean on the paid teacher *less* — which is literally the thing being measured.
 
-→ Use the repo's **Sponsor** button (`.github/FUNDING.yml`).
+→ **[☕ ko-fi.com/javierspn](https://ko-fi.com/javierspn)** — or the repo's **Sponsor** button (top of page).
+Every euro is logged against the "Mac Mini fund" goal and spent only on compute.
 
 <div align="right"><a href="#top">↑ back to top</a></div>
 
