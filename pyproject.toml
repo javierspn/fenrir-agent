@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fenrir"
-version = "0.1.0"
+version = "0.6.0"
 requires-python = ">=3.12"
 # 01-infra: bootstrap + benchmark-loader. 002-cognitive-core: the loop, proxy, sandbox.
 dependencies = [

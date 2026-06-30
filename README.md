@@ -1,3 +1,5 @@
+<!-- SCRUBBED PUBLIC REFLECTION of README.md — do not edit directly. Edit README.md (canonical),
+     then mirror here, stripping any infra/host/secret specifics. The export gate fails closed on leaks. -->
 <a id="top"></a>
 <div align="center">
 
@@ -44,6 +46,7 @@ crystallizing verified skills, leaning on an expensive "teacher" model less and 
 - [Run it](#run)
 - [Status](#status)
 - [Support the experiment](#support)
+- [Acknowledgments](#thanks)
 - [Docs & links](#links)
 - [License & ethics](#license)
 
@@ -269,6 +272,23 @@ Donations go **straight to compute**:
 
 → **[☕ ko-fi.com/javierspn](https://ko-fi.com/javierspn)** — or the repo's **Sponsor** button (top of page).
 Every euro is logged against the "Mac Mini fund" goal and spent only on compute.
+
+<div align="right"><a href="#top">↑ back to top</a></div>
+
+---
+
+<a id="thanks"></a>
+## 🙏 Acknowledgments
+
+A solo, self-funded experiment — made possible by free and open infrastructure:
+
+- **[Kaggle](https://www.kaggle.com)** — free **T4 GPU** notebooks generate the contamination-safe,
+  family-structured problem sets the loop learns on and is measured against.
+- **Open models & tooling** — the **[Qwen](https://github.com/QwenLM)** family via
+  **[Ollama](https://ollama.com)** (local solver + problem generator), **[SymPy](https://www.sympy.org)**
+  as the ungameable verifier, and **Postgres + pgvector** as the memory substrate.
+
+Free compute is what makes the *measurement* — the actual deliverable — affordable for one person.
 
 <div align="right"><a href="#top">↑ back to top</a></div>
 

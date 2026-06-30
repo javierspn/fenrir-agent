@@ -52,7 +52,10 @@ def run(conn: psycopg.Connection | None = None, *, load_benchmarks: bool = True)
             from benchmark_loader.load import load_and_partition
 
             pools = load_and_partition(conn)         # FR-016
-            print(f"benchmarks: {pools}")
+            from fenrir.bootstrap.backfill_embeddings import backfill_training_embeddings
+
+            n_emb = backfill_training_embeddings(conn)   # 004 T003 — task vectors for adjacency
+            print(f"benchmarks: {pools}; embedded {n_emb} training tasks")
 
         mark_bootstrapped(conn)                       # FR-017 — only after all sections succeed
         print(f"✓ bootstrapped: {n_anchors} anchors, {n_rel} relations")

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -74,6 +74,38 @@ class Settings(BaseSettings):
     STRENGTH_PER_REPLAY: float = 0.1       # abstraction strength accrued per replay hit
     COHERENCE_MAX_SPREAD: float = 0.25     # over-merge guard: max internal cosine distance
     EFFECTIVE_SALIENCE_FLOOR: float = 0.05  # candidate floor below which an episode is skipped
+
+    # --- 004 feasibility-gated curriculum tunables (research.md R2/R3/R4) ---
+    # Adjacency-lane pick strength: 0 = pure feasibility filter (uniform among the adjacent
+    # band), 1 = strong pull to the highest-cosine adjacent task; intermediate = cosine-sharpened.
+    ADJACENCY_STRENGTH: float = 0.6
+    # Adjacent band over a candidate's max cosine to the skill loadout. The floor is pinned to
+    # RETRIEVAL_SIM_FLOOR so every adjacency pick is a real solve-time coverage hit (R2 floor
+    # reconciliation); the ceiling rejects trivial near-duplicates (anti coverage-inflation).
+    ADJACENCY_FEASIBILITY_FLOOR: float = 0.80   # = RETRIEVAL_SIM_FLOOR
+    ADJACENCY_TRIVIAL_CEIL: float = 0.92
+    # Forced diversity guard: >= this share of every cohort is a uniform external-benchmark draw,
+    # independent of adjacency (also the cold-start + exhaustion fallback). FR-004.
+    EXTERNAL_MIN_FRACTION: float = 0.30
+
+    # --- 005 PE-gated meta-reflection tunables (contracts/reflect.md; research R1/R2/R3) ---
+    REFLECT_ENABLED: bool = True            # master switch; False = pre-005 behavior (SC-008)
+    REFLECT_PE_LOW: float = 0.3             # none/cheap boundary (R1, bimodal valley)
+    # cheap/full boundary; defaults to CRYSTALLIZE_PE so {escalated}∪{pe>=HIGH} exactly supersets
+    # today's crystallize trigger (F1/R2 — no SC-008 regression).
+    REFLECT_PE_HIGH: float = 0.5
+    # within full: a matched skill with PE below ⇒ edit (admit versions it); cold or PE at/above ⇒
+    # create. 0.95 so the edit path is reachable on the live bimodal PE (full clusters 0.9–1.0, U3).
+    # The version-vs-new-skill split is delegated to admit()'s internal _LARGE_PE; this knob governs
+    # reflect's edit/create *labelling* and the future retrieval-keyed edit (P2.1).
+    REFLECT_EDIT_PE_MAX: float = 0.95
+    REFLECT_MODEL_ROLE: str = "reflector"  # proxy role label for the full-tier call (IX metering)
+
+    @model_validator(mode="after")
+    def _check_reflect_band(self) -> "Settings":
+        if self.REFLECT_PE_LOW > self.REFLECT_PE_HIGH:
+            raise ValueError("REFLECT_PE_LOW must be <= REFLECT_PE_HIGH")
+        return self
 
     @property
     def frontier_model(self) -> str:

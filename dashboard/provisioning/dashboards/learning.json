@@ -5,7 +5,7 @@
  "title": "Learning",
  "uid": "fenrir-learning",
  "schemaVersion": 39,
- "version": 6,
+ "version": 10,
  "tags": [
   "fenrir",
   "002-cognitive-core"
@@ -577,6 +577,312 @@
       "uid": "fenrir_core"
      },
      "rawSql": "SELECT date_trunc('hour', created_at) AS time, avg(CASE WHEN retrieval_abstraction_id IS NOT NULL THEN 1.0 ELSE 0.0 END) AS abstraction_reuse_rate FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 22,
+   "type": "text",
+   "title": "🧩 Curriculum verdict — per cohort (004)",
+   "gridPos": {
+    "h": 3,
+    "w": 24,
+    "x": 0,
+    "y": 65
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "Feasibility-gated curriculum (P2.9 / D6) verdict signals, **one point per cohort** (a cohort = one `fenrir-cohort.timer` nightly run, so the daily bucket ≈ one cohort; intra-day manual `--run N` batches merge into that day). Read the four together: **coverage must rise first** (🧩), **reuse must track it** (♻ — accuracy-up + reuse-flat = contamination, not learning, SC-003), **skill-covered escalation must separate below cold** (🎯, SC-002), **overall escalation must trend down** (↓, SC-004). A flat or zero line is a valid, recorded **negative** result (SC-007) — it is drawn plainly, not hidden."
+   }
+  },
+  {
+   "id": 23,
+   "type": "timeseries",
+   "title": "🧩 Coverage per cohort — did a stored skill MATCH? (SC-001)",
+   "description": "Share of tasks per cohort where a stored skill or consolidated abstraction was retrieved at all (retrieval_skill_id OR retrieval_abstraction_id). The 004 lever's primary target: drag this off ~0.8% so reuse can bite. Must rise before the 🎯 gap below can open.",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 68
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "max": 1,
+     "custom": {
+      "drawStyle": "line",
+      "pointSize": 5,
+      "showPoints": "always",
+      "spanNulls": true
+     }
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT min(created_at) AS time, avg(CASE WHEN retrieval_skill_id IS NOT NULL OR retrieval_abstraction_id IS NOT NULL THEN 1.0 ELSE 0.0 END) AS coverage FROM tasks WHERE $__timeFilter(created_at) GROUP BY COALESCE(cohort_id::text, date_trunc('day',created_at)::text) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 24,
+   "type": "timeseries",
+   "title": "♻ Reuse tracks coverage? (SC-003 kill cross-check)",
+   "description": "Coverage (a skill matched) vs reuse (a consolidated abstraction actually drove the solve, retrieval_abstraction_id). Reuse ⊆ coverage. The kill cross-check: if coverage rises but reuse stays flat, the lift is recall/contamination, NOT the compounding library. Reuse must rise in lockstep.",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 68
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "max": 1,
+     "custom": {
+      "drawStyle": "line",
+      "pointSize": 5,
+      "showPoints": "always",
+      "spanNulls": true
+     }
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT min(created_at) AS time, avg(CASE WHEN retrieval_skill_id IS NOT NULL OR retrieval_abstraction_id IS NOT NULL THEN 1.0 ELSE 0.0 END) AS coverage, avg(CASE WHEN retrieval_abstraction_id IS NOT NULL THEN 1.0 ELSE 0.0 END) AS reuse FROM tasks WHERE $__timeFilter(created_at) GROUP BY COALESCE(cohort_id::text, date_trunc('day',created_at)::text) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 25,
+   "type": "timeseries",
+   "title": "🎯 Skill-covered vs cold escalation — does the gap open? (SC-002)",
+   "description": "Per cohort: escalation rate on tasks where a skill matched (covered) vs tasks met cold (no stored knowledge). If learning is real, the covered line drops BELOW cold and the gap widens — the skill let it skip the teacher. Lines sitting together = hoarding skills it never reuses (recall, not learning). The kill-switch, per cohort.",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 76
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "custom": {
+      "drawStyle": "line",
+      "pointSize": 5,
+      "showPoints": "always",
+      "spanNulls": true
+     }
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT min(created_at) AS time, avg(CASE WHEN retrieval_skill_id IS NOT NULL OR retrieval_abstraction_id IS NOT NULL THEN (CASE WHEN escalated THEN 100.0 ELSE 0.0 END) END) AS \"Skill-covered\", avg(CASE WHEN retrieval_skill_id IS NULL AND retrieval_abstraction_id IS NULL THEN (CASE WHEN escalated THEN 100.0 ELSE 0.0 END) END) AS \"Cold — no skill\" FROM tasks WHERE $__timeFilter(created_at) GROUP BY COALESCE(cohort_id::text, date_trunc('day',created_at)::text) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 26,
+   "type": "timeseries",
+   "title": "↓ Overall escalation per cohort (SC-004, flat = negative)",
+   "description": "Share of all tasks per cohort that needed the expensive teacher. The D7 headline: if compounding is real this trends down over the series. A flat line is the headline failure mode (built recall, not compounding) and is a valid, recorded negative (SC-007).",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 76
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "min": 0,
+     "max": 1,
+     "custom": {
+      "drawStyle": "line",
+      "pointSize": 5,
+      "showPoints": "always",
+      "spanNulls": true
+     }
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT min(created_at) AS time, avg(CASE WHEN escalated THEN 1.0 ELSE 0.0 END) AS escalation_rate FROM tasks WHERE $__timeFilter(created_at) GROUP BY COALESCE(cohort_id::text, date_trunc('day',created_at)::text) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 27,
+   "type": "text",
+   "title": "🪞 PE-gated meta-reflection (005)",
+   "gridPos": {
+    "h": 3,
+    "w": 24,
+    "x": 0,
+    "y": 84
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "Reflection effort concentrates on **surprise** (P1.2 / D3). Each task is tiered by prediction-error (escalation forces full): **none** = skip (no model call), **cheap** = a no-LLM note, **full** = one pass → skill edit-or-create. If the gate works, the tier mix tracks the PE distribution (not uniform), and full reflections yield skill **created/edited** events. A cohort with no surprise shows all none/cheap — a valid recorded outcome."
+   }
+  },
+  {
+   "id": 28,
+   "type": "timeseries",
+   "title": "Reflection tier mix per cohort (effort tracks surprise)",
+   "description": "Per-cohort count of tasks at each reflection tier. Concentrated in none/cheap with a thin full slice = the gate is spending effort only where the system was surprised (SC-001/SC-002).",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 87
+   },
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "custom": {
+      "drawStyle": "line",
+      "pointSize": 5,
+      "showPoints": "always",
+      "spanNulls": true
+     }
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT min(created_at) AS time, count(*) FILTER (WHERE reflection_tier='none') AS none, count(*) FILTER (WHERE reflection_tier='cheap') AS cheap, count(*) FILTER (WHERE reflection_tier='full') AS full FROM tasks WHERE is_eval=false AND reflection_tier IS NOT NULL AND $__timeFilter(created_at) GROUP BY COALESCE(cohort_id::text, date_trunc('day',created_at)::text) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 29,
+   "type": "timeseries",
+   "title": "Reflection outcomes per cohort (the compounding payoff)",
+   "description": "Full-tier outcomes: created (new skill) / edited (new version of a matched skill) / suppressed (budget). created+edited per cohort = surprise turning into library growth (SC-004). Flat zero is a valid recorded negative.",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 87
+   },
+   "fieldConfig": {
+    "defaults": {
+     "min": 0,
+     "custom": {
+      "drawStyle": "line",
+      "pointSize": 5,
+      "showPoints": "always",
+      "spanNulls": true
+     }
+    },
+    "overrides": []
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "SELECT min(created_at) AS time, count(*) FILTER (WHERE reflection_outcome='created') AS created, count(*) FILTER (WHERE reflection_outcome='edited') AS edited, count(*) FILTER (WHERE reflection_outcome='suppressed') AS suppressed FROM tasks WHERE is_eval=false AND $__timeFilter(created_at) GROUP BY COALESCE(cohort_id::text, date_trunc('day',created_at)::text) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 30,
+   "type": "text",
+   "title": "🧬 Within-family compounding verdict (006)",
+   "gridPos": {
+    "h": 3,
+    "w": 24,
+    "x": 0,
+    "y": 95
+   },
+   "options": {
+    "mode": "markdown",
+    "content": "Clean contamination-safe family pool (`benchmark='qwen-gen'`). Per solution-method **family**, escalation on the **first** solved member vs **later** members, and reuse on later members. **Compounding ⇔ `escal_rest` < `escal_first` AND `reuse_rest` > 0.** A family where they're equal is **flat = recall**, a valid recorded negative (the cleanest read on the bet, D13)."
+   }
+  },
+  {
+   "id": 31,
+   "type": "table",
+   "title": "By-family: escalation first vs rest + reuse",
+   "datasource": {
+    "type": "postgres",
+    "uid": "fenrir_core"
+   },
+   "gridPos": {
+    "h": 10,
+    "w": 24,
+    "x": 0,
+    "y": 98
+   },
+   "targets": [
+    {
+     "format": "table",
+     "datasource": {
+      "type": "postgres",
+      "uid": "fenrir_core"
+     },
+     "rawSql": "WITH fam AS (SELECT bt.family, t.escalated, t.retrieval_skill_id, t.retrieval_abstraction_id, row_number() OVER (PARTITION BY bt.family ORDER BY t.created_at) AS pos FROM tasks t JOIN benchmark_tasks bt ON bt.problem_id=t.benchmark_id WHERE bt.benchmark='qwen-gen' AND t.is_eval=false AND t.status<>'in_progress') SELECT family, count(*) AS solved, round(100*avg(escalated::int) FILTER (WHERE pos=1),1) AS escal_first, round(100*avg(escalated::int) FILTER (WHERE pos>1),1) AS escal_rest, round(100*avg((retrieval_skill_id IS NOT NULL OR retrieval_abstraction_id IS NOT NULL)::int) FILTER (WHERE pos>1),1) AS reuse_rest FROM fam GROUP BY family ORDER BY family"
     }
    ]
   }

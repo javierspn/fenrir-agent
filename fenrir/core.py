@@ -53,33 +53,36 @@ def proxy_call(task_id: str, model_class: str, prompt: str, *, role: str = "solv
 
 
 # ---------------------------------------------------------------------------
-# task selection — TRAINING pool only; prefer unsolved / under-practiced (FR-001/002, III)
+# task selection — feasibility-gated, skill-adjacency-biased (004). TRAINING pool
+# only (III). The policy lives in fenrir.curriculum (imported lazily to avoid a
+# module-load cycle: curriculum imports BenchTask from here).
 # ---------------------------------------------------------------------------
-def select_task(conn: psycopg.Connection) -> BenchTask | None:
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT b.id, b.problem_id, b.content, b.ground_truth, b.domain "
-            "FROM benchmark_tasks b "
-            "WHERE b.pool = 'training' "                       # NEVER evaluation (III)
-            "  AND NOT EXISTS (SELECT 1 FROM tasks t "
-            "                  WHERE t.benchmark_id = b.problem_id AND t.status = 'succeeded') "
-            "ORDER BY (SELECT count(*) FROM tasks t2 WHERE t2.benchmark_id = b.problem_id) ASC, "
-            "         random() LIMIT 1"
-        )
-        row = cur.fetchone()
-    if not row:
-        return None
-    return BenchTask(str(row[0]), row[1], row[2], row[3], row[4] or "math")
+def select_task(conn: psycopg.Connection, *, force_external: bool = False,
+                seed: int | None = None) -> BenchTask | None:
+    """Back-compat thin wrapper: returns just the BenchTask (the loop reads the audit via
+    the full Selection in run_iteration). Default lane is adjacency, falling back to the
+    uniform external draw on cold start / exhaustion."""
+    from fenrir import curriculum
+
+    sel = curriculum.select(conn, force_external=force_external, seed=seed)
+    return sel.task if sel is not None else None
 
 
-def _new_task_row(conn: psycopg.Connection, bt: BenchTask, pred: Prediction) -> str:
-    """Create the attempt row, writing predicted_confidence BEFORE solving (FR-004)."""
+def _new_task_row(conn: psycopg.Connection, bt: BenchTask, pred: Prediction, *,
+                  selected_via: str | None = None,
+                  adjacent_skill_id: str | None = None,
+                  cohort_id: str | None = None) -> str:
+    """Create the attempt row, writing predicted_confidence BEFORE solving (FR-004) and the
+    selection audit (FR-003). is_eval=false + benchmark_pool='training' enforced here at the
+    write boundary (Constitution III). cohort_id groups one --run batch (0008, verdict series)."""
     with conn.cursor() as cur:
         cur.execute(
             "INSERT INTO tasks (content, domain, source, benchmark_id, benchmark_pool, status, "
-            " is_eval, predicted_confidence) "
-            "VALUES (%s, %s, 'benchmark', %s, 'training', 'in_progress', false, %s) RETURNING id",
-            (bt.content, bt.domain, bt.problem_id, pred.confidence),
+            " is_eval, predicted_confidence, selected_via, adjacent_skill_id, cohort_id) "
+            "VALUES (%s, %s, 'benchmark', %s, 'training', 'in_progress', false, %s, %s, %s, %s) "
+            "RETURNING id",
+            (bt.content, bt.domain, bt.problem_id, pred.confidence, selected_via,
+             adjacent_skill_id, cohort_id),
         )
         task_id = cur.fetchone()[0]
     conn.commit()
@@ -110,16 +113,21 @@ def _predict_prompt(content: str) -> str:
 # ---------------------------------------------------------------------------
 # one iteration
 # ---------------------------------------------------------------------------
-def run_iteration(conn: psycopg.Connection) -> dict | None:
+def run_iteration(conn: psycopg.Connection, *, force_external: bool = False,
+                  seed: int | None = None, cohort_id: str | None = None) -> dict | None:
+    from fenrir import curriculum
+
     s = get_settings()
-    bt = select_task(conn)
-    if bt is None:
+    sel = curriculum.select(conn, force_external=force_external, seed=seed)
+    if sel is None:
         return None
+    bt = sel.task
 
     # 1. predict-before-solve (FR-004)
     pred_raw = proxy_call("pending", "small", _predict_prompt(bt.content), role="predictor")
     pred = parse_prediction(pred_raw.get("text", ""))
-    task_id = _new_task_row(conn, bt, pred)
+    task_id = _new_task_row(conn, bt, pred, selected_via=sel.selected_via,
+                            adjacent_skill_id=sel.adjacent_skill_id, cohort_id=cohort_id)
 
     # 2. retrieve (FR-007) → decide solve path
     retr = retrieval.retrieve(conn, bt.content)
@@ -168,16 +176,21 @@ def run_iteration(conn: psycopg.Connection) -> dict | None:
         )
     conn.commit()
 
-    # 8. crystallize a SURPRISING win (US2). A verified success the small model did NOT
-    # already own — it either needed the teacher (escalated) or the outcome was high-surprise
-    # (PE >= threshold). Never on a task it confidently predicted AND solved locally (IV/SC-006).
-    # Determined BEFORE the episode write (003 A) so value() sees all three signals at once.
-    crystallized = False
-    if verdict == SUCCEEDED and solve_path == "scratch" and (escalated or pe >= s.CRYSTALLIZE_PE):
-        from fenrir.skills import admit, crystallize
+    # 8. PE-gated meta-reflection (005, P1.2). Tiers effort by surprise (escalation forces full);
+    # subsumes crystallization (full + verified win → crystallize→admit, which versions-or-creates
+    # by PE) and adds the cheap/none tiers + audit. is_eval read-only (III); budget-safe (IX);
+    # best-effort (never raises). Determined BEFORE the episode write (003 A) so value() sees the
+    # crystallize signal. `crystallized` now = "reflection produced/edited a skill".
+    from fenrir.reflect import ReflectCtx, reflect
 
-        cand = crystallize.make_candidate(bt.content, candidate, solve.get("text", ""))
-        crystallized = admit.admit(conn, cand, originating=(candidate, bt.ground_truth), pe=pe)
+    refl = reflect(conn, ReflectCtx(
+        task_id=task_id, prediction_error=pe, verdict=verdict, solve_path=solve_path,
+        escalated=escalated, is_eval=False,
+        retrieval_skill_id=(str(retr.top_skill.skill_id) if retr.top_skill else None),
+        problem_text=bt.content, candidate_answer=candidate, solve_text=solve.get("text", ""),
+        ground_truth=bt.ground_truth,
+    ))
+    crystallized = refl.outcome in ("edited", "created")
 
     # 9. additive episode (FR-016) with the live significance bookmark (003 A). importance
     # holds value(verdict, escalated, crystallized) — the reward-magnitude factor, no longer
@@ -194,17 +207,29 @@ def run_iteration(conn: psycopg.Connection) -> dict | None:
         "task_id": task_id, "verdict": verdict, "prediction_error": pe,
         "solve_path": solve_path, "escalated": escalated, "episode_id": episode_id,
         "crystallized": crystallized,
+        "reflection_tier": refl.tier, "reflection_outcome": refl.outcome,
     }
 
 
 def run(n: int) -> list[dict]:
+    import uuid
+
+    from fenrir import curriculum
+
     s = get_settings()
+    # One cohort_id per --run invocation (0008): the verdict series plots one point per batch, so
+    # many same-day batches each count as a distinct cohort (no longer one-per-calendar-day).
+    cohort_id = str(uuid.uuid4())
+    # Per-cohort diversity guard (FR-004, US2): >= EXTERNAL_MIN_FRACTION of the n slots take the
+    # uniform external lane, deterministically spread, independent of adjacency. The rest take the
+    # adjacency lane (falling back to external on cold start / exhaustion).
+    plan = curriculum.external_slot_plan(n, s.EXTERNAL_MIN_FRACTION)
     conn = connect()
     out: list[dict] = []
     try:
         for i in range(n):
             try:
-                res = run_iteration(conn)
+                res = run_iteration(conn, force_external=plan[i], cohort_id=cohort_id)
             except Exception as exc:  # one bad task must not kill the cohort
                 conn.rollback()
                 print(f"  ! iteration {i} errored, skipping: {type(exc).__name__}: {exc}")

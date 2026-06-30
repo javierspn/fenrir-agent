@@ -9,7 +9,7 @@
   "human"
  ],
  "schemaVersion": 39,
- "version": 1,
+ "version": 2,
  "editable": true,
  "description": "Human-readable verdict view: is Fenrir compounding (learning) or just recalling? Engineer detail lives in the 'Learning' dashboard.",
  "time": {
@@ -480,6 +480,95 @@
       "uid": "fenrir_core"
      },
      "rawSql": "SELECT created_at AS time, count(*) OVER (ORDER BY created_at) AS \"Abstractions\" FROM long_term_memory WHERE abstraction_level>=2 AND memory_type='semantic' AND $__timeFilter(created_at) ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "type": "text",
+   "title": "",
+   "gridPos": { "h": 3, "w": 24, "x": 0, "y": 34 },
+   "options": {
+    "mode": "markdown",
+    "content": "## 🔬 The real test — is a skill actually *used*?\nThe charts above can look busy while nothing real happens: Fenrir can pile up skills it never reuses. These two cut through that. **Read them together:** first *did it even have a matching skill?* (coverage), then *when it did, did that skill let it skip the teacher?* (the bet). Everything else is noise next to these two."
+   }
+  },
+  {
+   "id": 12,
+   "type": "timeseries",
+   "title": "🎯 When Fenrir HAD a matching skill — did it still need the teacher?",
+   "description": "The whole bet in one chart. GREEN = problems where Fenrir already had a relevant skill. GREY = problems it met cold, with nothing stored. If learning is real, the green line drops BELOW grey and keeps falling — the skill let it skip the expensive teacher. If green and grey sit together at the top, Fenrir is hoarding skills it never actually reuses: recall, not learning. This is the kill-switch. The feasibility-gated curriculum (004) is now LIVE — the per-cohort cut of this gap lives on the engineer 'Learning' board (verdict series, SC-002).",
+   "datasource": { "type": "postgres", "uid": "fenrir_core" },
+   "gridPos": { "h": 10, "w": 24, "x": 0, "y": 37 },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 10,
+      "lineWidth": 3,
+      "pointSize": 7,
+      "showPoints": "auto",
+      "spanNulls": true
+     },
+     "min": 0,
+     "max": 100
+    },
+    "overrides": [
+     {
+      "matcher": { "id": "byName", "options": "Had a matching skill" },
+      "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+     },
+     {
+      "matcher": { "id": "byName", "options": "Cold — no skill" },
+      "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#8b98a8" } }]
+     }
+    ]
+   },
+   "options": {
+    "legend": { "showLegend": true, "placement": "bottom", "displayMode": "list" },
+    "tooltip": { "mode": "multi" }
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": { "type": "postgres", "uid": "fenrir_core" },
+     "rawSql": "SELECT date_trunc('day',created_at) AS time, avg(CASE WHEN retrieval_abstraction_id IS NOT NULL THEN (CASE WHEN escalated THEN 100.0 ELSE 0.0 END) END) AS \"Had a matching skill\", avg(CASE WHEN retrieval_abstraction_id IS NULL THEN (CASE WHEN escalated THEN 100.0 ELSE 0.0 END) END) AS \"Cold — no skill\" FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "type": "timeseries",
+   "title": "🧩 Did Fenrir even HAVE a relevant skill to use?",
+   "description": "Before reuse can pay off, a stored skill has to actually MATCH the new problem. This is how often that happened — the share of problems where a consolidated skill was retrieved at all. If this is near zero, the problem stream is too random for any skill to apply: the fix is curriculum (feed it problems near skills it already owns), not more skills. This line must rise first, before the green line above can fall. That fix — the feasibility-gated curriculum (004) — is now LIVE, biasing the task draw toward skill-adjacent problems to lift exactly this line off the ~0.8% floor; watch it climb (SC-001).",
+   "datasource": { "type": "postgres", "uid": "fenrir_core" },
+   "gridPos": { "h": 8, "w": 24, "x": 0, "y": 47 },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": {
+      "drawStyle": "line",
+      "fillOpacity": 14,
+      "lineWidth": 2,
+      "pointSize": 6,
+      "showPoints": "auto"
+     },
+     "min": 0,
+     "max": 100,
+     "color": { "mode": "fixed", "fixedColor": "super-light-blue" }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": { "showLegend": false },
+    "tooltip": { "mode": "single" }
+   },
+   "targets": [
+    {
+     "format": "time_series",
+     "datasource": { "type": "postgres", "uid": "fenrir_core" },
+     "rawSql": "SELECT date_trunc('day',created_at) AS time, avg(CASE WHEN retrieval_abstraction_id IS NOT NULL THEN 100.0 ELSE 0.0 END) AS \"Had a skill ready\" FROM tasks WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1"
     }
    ]
   }

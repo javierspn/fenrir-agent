@@ -25,6 +25,24 @@ The system is designed around one safety line:
   a human owns the verifier and the decision. Fenrir must **never** be wired to act autonomously
   there. In those settings, reward-hacking is not a quality bug — it is a safety failure.
 
+## Verification is graduated, not binary
+
+"Ungameable" weakens as the domain ladder climbs, so the line is drawn between three tiers:
+
+| Tier | Verifier | Examples | Autonomy |
+|---|---|---|---|
+| **1 — Exact / formal** | ground truth or proof | symbolic equivalence (`sympy`), formal equivalence | **autonomous** |
+| **2 — Coverage-bounded** | passes only over a defined coverage model | unit/property tests, simulation | **autonomous only behind a coverage gate** (a skill must not crystallize from a pass whose coverage is unknown — green tests ≠ correct on untested inputs) |
+| **3 — Approximate / model-based** | "truth" is a tunable model of reality the optimizer can fit | SPICE, FEA | **decision-support only** |
+
+A verifier earns autonomy (Tier 1–2) only if it is **all four**: external to the solver · more
+authoritative than the artifact it checks (ground truth/proof, not a model you can overfit) · far
+cheaper than solving · able to catch errors *before* any irreversible consequence.
+
+**On the ladder:** mathematics → code → digital-logic/HDL are autonomous-eligible (HDL reaches
+Tier 1–2 via formal equivalence). **Costlier-simulation engineering (SPICE/FEA)** and every
+unverifiable / high-stakes domain are **decision-support**. (Mirrors constitution XIII / D7.)
+
 ## Please do not
 
 - Deploy the autonomous loop in a domain that lacks a cheap, ungameable verifier.

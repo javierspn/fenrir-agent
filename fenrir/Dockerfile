@@ -17,6 +17,10 @@ RUN apt-get update \
 WORKDIR /app
 COPY pyproject.toml ./
 COPY fenrir ./fenrir
+# benchmark_loader ships in the loop image too (006): the loop node generates problems against the
+# host Ollama + loads them sandbox-verified — reuses this container's Ollama reach + docker.sock.
+COPY benchmark_loader ./benchmark_loader
+COPY infra ./infra
 RUN pip install --no-cache-dir .
 
 # Default: bring up the proxy. The loop is run on demand (`python -m fenrir.core --run N`).
